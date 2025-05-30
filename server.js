@@ -26,7 +26,7 @@ app.post("/api/contact", async (req, res) => {
   const { name, phone, product, city, best_time, message } = req.body;
 
   try {
-    const values = [[name, phone, product, city, best_time, message, new Date().toLocaleString()]];
+    const values = [[name, phone, product, city, best_time, message, new Date().toLocaleString('en-US', {timeZone: 'Asia/kolkata'})]];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
