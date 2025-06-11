@@ -23,10 +23,10 @@ const spreadsheetId = process.env.SPREADSHEET_ID;
 const sheetName = "Sheet1";
 
 app.post("/api/contact", async (req, res) => {
-  const { name, phone, product, city, best_time, message } = req.body;
+  const { name, phone, city, best_time,} = req.body;
 
   try {
-    const values = [[name, phone, product, city, best_time, message, new Date().toLocaleString('en-US', {timeZone: 'Asia/kolkata'})]];
+    const values = [[name, phone, best_time, new Date().toLocaleString('en-US', {timeZone: 'Asia/kolkata'})]];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
