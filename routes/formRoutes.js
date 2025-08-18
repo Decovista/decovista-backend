@@ -1,11 +1,8 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { submitForm, getOrders } = require("../controllers/formController");
+const { submitForm, getOrders } = require('../controllers/formController');
 
-// POST /api/contact
-router.post("/contact", submitForm);
-
-// GET /api/orders
-router.get("/orders", getOrders);
+router.post('/contact', submitForm);
+router.get('/orders', getOrders);
 
 module.exports = router;
