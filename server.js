@@ -34,6 +34,19 @@ const productSchema = new mongoose.Schema({
 
 const Product = mongoose.model('Product', productSchema);
 
+// Contact schema & model (NEW)
+const contactSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  phone: { type: String, required: true },
+  propertyName: { type: String, required: true },
+  city: String,
+  best_time: String,
+  message: String,
+  submitted_at: { type: Date, default: Date.now }
+});
+
+const Contact = mongoose.model('Contact', contactSchema);
+
 // Multer config for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
@@ -42,6 +55,18 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Routes
+
+// ✅ Contact form route
+app.post('/api/contact', async (req, res) => {
+  try {
+    const contact = new Contact(req.body);
+    await contact.save();
+    res.json({ success: true, message: 'Form submitted successfully!' });
+  } catch (err) {
+    console.error('❌ Error saving contact:', err);
+    res.status(500).json({ success: false, message: 'Server error while saving form.' });
+  }
+});
 
 // Create product
 app.post('/api/products', upload.single('image'), async (req, res) => {
@@ -108,7 +133,6 @@ app.put('/api/products/:id', upload.single('image'), async (req, res) => {
     product.WhatsIncluded = WhatsIncluded ? WhatsIncluded.split(',').map(i => i.trim()) : product.WhatsIncluded;
 
     if (req.file) {
-      // Delete old image if exists
       if (product.imageUrl) {
         const oldImg = path.join(__dirname, product.imageUrl);
         if (fs.existsSync(oldImg)) fs.unlinkSync(oldImg);
