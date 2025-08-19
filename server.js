@@ -9,12 +9,12 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// === Middleware ===
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MongoDB connection
+// === MongoDB connection ===
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/products', {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -34,51 +34,21 @@ const productSchema = new mongoose.Schema({
 
 const Product = mongoose.model('Product', productSchema);
 
-// === Contact Schema & Model ===
-const contactSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  phone: { type: String, required: true },
-  propertyName: { type: String, required: true },
-  city: String,
-  best_time: String,
-  message: String
-}, { timestamps: true }); // ✅ Adds createdAt and updatedAt
-
-const Contact = mongoose.model('Contact', contactSchema);
-
-// === Multer for File Uploads ===
+// === Multer setup ===
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
 
-// === ROUTES ===
+// === Routes ===
 
-// ✅ Submit contact form
-app.post('/api/contact', async (req, res) => {
-  try {
-    const contact = new Contact(req.body);
-    await contact.save();
-    res.json({ success: true, message: 'Form submitted successfully!' });
-  } catch (err) {
-    console.error('❌ Error saving contact:', err);
-    res.status(500).json({ success: false, message: 'Server error while saving form.' });
-  }
-});
+const contactRoutes = require('./routes/contactRoutes'); 
+app.use('/api/contact', contactRoutes);
 
-// ✅ Get all contact submissions
-app.get('/api/contact', async (req, res) => {
-  try {
-    const contacts = await Contact.find().sort({ createdAt: -1 });
-    res.json(contacts);
-  } catch (err) {
-    console.error('❌ Error fetching contacts:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch contact submissions.' });
-  }
-});
+// ✅ Product routes
 
-// ✅ Create product
+// Create product
 app.post('/api/products', upload.single('image'), async (req, res) => {
   try {
     const { Pname, slug, text, category, Ideal, WhatsIncluded } = req.body;
@@ -101,7 +71,7 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
   }
 });
 
-// ✅ Get all products
+// Get all products
 app.get('/api/products', async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
@@ -111,7 +81,7 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// ✅ Delete product
+// Delete product
 app.delete('/api/products/:id', async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
@@ -129,7 +99,7 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 });
 
-// ✅ Update product
+// Update product
 app.put('/api/products/:id', upload.single('image'), async (req, res) => {
   try {
     const { Pname, slug, text, category, Ideal, WhatsIncluded } = req.body;
@@ -159,5 +129,5 @@ app.put('/api/products/:id', upload.single('image'), async (req, res) => {
   }
 });
 
-// Start server
+// === Start server ===
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
