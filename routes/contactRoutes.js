@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Contact = require('../models/Contact'); // adjust path as needed
+const Contact = require('../models/Contact');
 
-// POST /api/contact
 router.post('/', async (req, res) => {
   try {
     const contact = new Contact(req.body);
@@ -14,7 +13,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/contact
 router.get('/', async (req, res) => {
   try {
     const contacts = await Contact.find().sort({ createdAt: -1 });
