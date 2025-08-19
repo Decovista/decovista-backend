@@ -21,7 +21,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/products'
 }).then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB error:', err));
 
-// Product schema & model
+// === Product Schema & Model ===
 const productSchema = new mongoose.Schema({
   Pname: String,
   slug: String,
@@ -34,29 +34,28 @@ const productSchema = new mongoose.Schema({
 
 const Product = mongoose.model('Product', productSchema);
 
-// Contact schema & model (NEW)
+// === Contact Schema & Model ===
 const contactSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true },
   propertyName: { type: String, required: true },
   city: String,
   best_time: String,
-  message: String,
-  submitted_at: { type: Date, default: Date.now }
-});
+  message: String
+}, { timestamps: true }); // ✅ Adds createdAt and updatedAt
 
 const Contact = mongoose.model('Contact', contactSchema);
 
-// Multer config for image uploads
+// === Multer for File Uploads ===
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
 
-// Routes
+// === ROUTES ===
 
-// ✅ Contact form route
+// ✅ Submit contact form
 app.post('/api/contact', async (req, res) => {
   try {
     const contact = new Contact(req.body);
@@ -68,7 +67,18 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// Create product
+// ✅ Get all contact submissions
+app.get('/api/contact', async (req, res) => {
+  try {
+    const contacts = await Contact.find().sort({ createdAt: -1 });
+    res.json(contacts);
+  } catch (err) {
+    console.error('❌ Error fetching contacts:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch contact submissions.' });
+  }
+});
+
+// ✅ Create product
 app.post('/api/products', upload.single('image'), async (req, res) => {
   try {
     const { Pname, slug, text, category, Ideal, WhatsIncluded } = req.body;
@@ -86,12 +96,12 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
     await newProduct.save();
     res.status(201).json(newProduct);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error creating product:', err);
     res.status(500).json({ error: 'Create failed' });
   }
 });
 
-// Get all products
+// ✅ Get all products
 app.get('/api/products', async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
@@ -101,6 +111,7 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+// ✅ Delete product
 app.delete('/api/products/:id', async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
@@ -113,12 +124,12 @@ app.delete('/api/products/:id', async (req, res) => {
 
     res.json({ message: 'Product deleted' });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error deleting product:', err);
     res.status(500).json({ error: 'Delete failed' });
   }
 });
 
-// Update product
+// ✅ Update product
 app.put('/api/products/:id', upload.single('image'), async (req, res) => {
   try {
     const { Pname, slug, text, category, Ideal, WhatsIncluded } = req.body;
@@ -143,9 +154,10 @@ app.put('/api/products/:id', upload.single('image'), async (req, res) => {
     await product.save();
     res.json(product);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error updating product:', err);
     res.status(500).json({ error: 'Update failed' });
   }
 });
 
+// Start server
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
