@@ -5,23 +5,22 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { google } = require('googleapis');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// === Middleware ===
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// === MongoDB connection ===
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/products', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB error:', err));
 
-// === Product Schema & Model ===
+
 const productSchema = new mongoose.Schema({
   Pname: String,
   slug: String,
@@ -34,21 +33,65 @@ const productSchema = new mongoose.Schema({
 
 const Product = mongoose.model('Product', productSchema);
 
-// === Multer setup ===
+const contactSchema = new mongoose.Schema({
+  name: String,
+  phone: String,
+  propertyName: String,
+  city: String,
+  best_time: String,
+  message: String
+}, { timestamps: true });
+
+const Contact = mongoose.model('Contact', contactSchema);
+
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
 
-// === Routes ===
+async function appendToGoogleSheet(data) {
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_CLIENT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    },
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
 
-const contactRoutes = require('./routes/contactRoutes'); 
-app.use('/api/contact', contactRoutes);
+  const sheets = google.sheets({ version: "v4", auth });
 
-// ✅ Product routes
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: process.env.SPREADSHEET_ID,
+    range: "Sheet1!A:F",
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [data],
+    },
+  });
+}
 
-// Create product
+
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, phone, propertyName, city, best_time, message } = req.body;
+
+
+    const newContact = new Contact({ name, phone, propertyName, city, best_time, message });
+    await newContact.save();
+
+
+    await appendToGoogleSheet([name, phone, propertyName, city, best_time, message]);
+
+    res.json({ success: true, message: "Contact saved to DB & Google Sheets" });
+  } catch (err) {
+    console.error("❌ Contact API error:", err);
+    res.status(500).json({ success: false, message: "Failed to save contact" });
+  }
+});
+
+
 app.post('/api/products', upload.single('image'), async (req, res) => {
   try {
     const { Pname, slug, text, category, Ideal, WhatsIncluded } = req.body;
@@ -71,7 +114,6 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
   }
 });
 
-// Get all products
 app.get('/api/products', async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
@@ -81,7 +123,6 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// Delete product
 app.delete('/api/products/:id', async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
@@ -99,7 +140,6 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 });
 
-// Update product
 app.put('/api/products/:id', upload.single('image'), async (req, res) => {
   try {
     const { Pname, slug, text, category, Ideal, WhatsIncluded } = req.body;
@@ -129,5 +169,4 @@ app.put('/api/products/:id', upload.single('image'), async (req, res) => {
   }
 });
 
-// === Start server ===
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
